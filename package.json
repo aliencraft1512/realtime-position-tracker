@@ -1,0 +1,24 @@
+{
+  "name": "realtime-position-tracking",
+  "version": "1.0.0",
+  "description": "HTML5 Google Maps Geocode Location Tracking",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js"
+  },
+  "keywords": [
+    "HTML5",
+    "NodeJS",
+    "Leaflet"
+  ],
+  "author": "Akmal Maulana Azzam",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.15.4",
+    "socket.io": "^2.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}
