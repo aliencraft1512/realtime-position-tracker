@@ -1,11 +1,15 @@
 "use strict";
 
+let socket;
+
 const currentUserName = prompt("Your name ?", "Anonymous") || "Anonymous";
 let currentUserLocation = [];
-const markers = [];
-const currentUserCoordinatesElement = document.getElementById("coordinates");
-const mymap = L.map("mapid").setView([0, 0], 13);
 
+const currentUserCoordinatesElement = document.getElementById("coordinates");
+const currentUserConnectedElement = document.getElementById("online");
+
+let markers = [];
+const mymap = L.map("mapid").setView([0, 0], 13);
 L.tileLayer(
   "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}",
   {
@@ -20,35 +24,77 @@ L.tileLayer(
 
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
-    setInitialMarkerAndCoordinates,
+    setInitialSocketAndCoordinates,
     () => alert("Failed to get current position"),
     {
       enableHighAccuracy: true
     }
   );
-  // navigator.geolocation.watchPosition(updatePosition);
 } else {
   alert("Geolocation tracking is not available in your browser.");
 }
 
-function setInitialMarkerAndCoordinates(position) {
+function setInitialSocketAndCoordinates(position) {
   currentUserLocation = [position.coords.latitude, position.coords.longitude];
+  mymap.setView(currentUserLocation, 13);
 
+  setSocketIO();
+}
+
+function setSocketIO() {
+  socket = io();
+
+  socket.emit("update-marker", {
+    username: currentUserName,
+    coordinates: currentUserLocation
+  });
+
+  socket.on("update-markers-on-frontend", data => {
+    updateMarkersAndCoordinatesAndConnectedUsers(data);
+  });
+
+  navigator.geolocation.watchPosition(position => {
+    currentUserLocation = [position.coords.latitude, position.coords.longitude];
+
+    socket.emit("update-marker", {
+      username: currentUserName,
+      coordinates: currentUserLocation
+    });
+  });
+}
+
+function updateMarkersAndCoordinatesAndConnectedUsers(markersFromBackend) {
+  if (markers.length) {
+    markers.forEach(item => {
+      mymap.removeLayer(item);
+    });
+
+    markers = [];
+  }
+  markersFromBackend.forEach(item => {
+    markers.push(
+      L.marker(item.coordinates)
+        .addTo(mymap)
+        .bindPopup(item.username)
+        .openPopup()
+    );
+  });
+
+  if (currentUserConnectedElement.firstChild) {
+    currentUserConnectedElement.removeChild(
+      currentUserConnectedElement.firstChild
+    );
+  }
+  let currentUserConnected = document.createTextNode(markersFromBackend.length);
+  currentUserConnectedElement.appendChild(currentUserConnected);
+
+  if (currentUserCoordinatesElement.firstChild) {
+    currentUserCoordinatesElement.removeChild(
+      currentUserCoordinatesElement.firstChild
+    );
+  }
   const currentUserCoordinates = document.createTextNode(
     `Lat:${currentUserLocation[0]}, lng:${currentUserLocation[1]}`
   );
   currentUserCoordinatesElement.appendChild(currentUserCoordinates);
-
-  L.marker(currentUserLocation)
-    .addTo(mymap)
-    .bindPopup(currentUserName)
-    .openPopup();
-
-  markers.push({
-    markerId: `${currentUserName}${Date.now()}`,
-    username: currentUserName,
-    coordinates: [position.coords.latitude, position.coords.longitude]
-  });
-
-  mymap.setView(currentUserLocation, 13);
 }
